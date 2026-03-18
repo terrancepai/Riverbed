@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vector Support Assistant</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="page-shell">
+    <div class="hero-card">
+      <div class="hero-badge">● Online now</div>
+      <h1>Meet Vector</h1>
+      <p>
+        Your thoughtful AI support assistant for calm, clear, and helpful troubleshooting.
+      </p>
+
+      <div class="hero-pills">
+        <span>Friendly</span>
+        <span>Professional</span>
+        <span>Fast support</span>
+      </div>
+    </div>
+  </div>
+
+  <button id="chat-toggle" class="chat-toggle" aria-label="Open chat">
+    <span class="toggle-icon">💬</span>
+    <span class="toggle-text">Chat with Vector</span>
+  </button>
+
+  <div id="chat-widget" class="chat-widget hidden">
+    <div class="chat-header">
+      <div class="chat-profile">
+        <div class="avatar">V</div>
+        <div>
+          <div class="chat-title">Vector</div>
+          <div class="chat-subtitle">
+            <span class="status-dot"></span>
+            Support Assistant
+          </div>
+        </div>
+      </div>
+      <button id="close-chat" class="close-btn" aria-label="Close chat">×</button>
+    </div>
+
+    <div id="chat-messages" class="chat-messages">
+      <div class="message bot">
+        <div class="message-label">Vector</div>
+        Hi, I’m Vector. I’m here to help you work through technical issues clearly and efficiently.
+      </div>
+
+      <div class="quick-prompts">
+        <button class="prompt-chip" type="button">My app won’t load</button>
+        <button class="prompt-chip" type="button">I’m getting an error</button>
+        <button class="prompt-chip" type="button">Help me troubleshoot</button>
+      </div>
+    </div>
+
+    <form id="chat-form" class="chat-input-area">
+      <input
+        id="chat-input"
+        type="text"
+        placeholder="Describe the issue..."
+        autocomplete="off"
+      />
+      <button type="submit" id="send-btn">➜</button>
+    </form>
+  </div>
+
+  <script>
+    const chatToggle = document.getElementById("chat-toggle");
+    const closeChat = document.getElementById("close-chat");
+    const chatWidget = document.getElementById("chat-widget");
+    const chatForm = document.getElementById("chat-form");
+    const chatInput = document.getElementById("chat-input");
+    const chatMessages = document.getElementById("chat-messages");
+    const promptChips = document.querySelectorAll(".prompt-chip");
+
+    function addMessage(text, sender, temporary = false) {
+      const div = document.createElement("div");
+      div.className = `message ${sender}`;
+      if (temporary) div.classList.add("temp");
+
+      if (sender === "bot") {
+        div.innerHTML = `<div class="message-label">Vector</div>${text}`;
+      } else {
+        div.textContent = text;
+      }
+
+      chatMessages.appendChild(div);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function showTypingBubble() {
+      const div = document.createElement("div");
+      div.className = "message bot temp";
+      div.innerHTML = `
+        <div class="message-label">Vector</div>
+        <div class="typing">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      `;
+      chatMessages.appendChild(div);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    chatToggle.addEventListener("click", () => {
+      chatWidget.classList.toggle("hidden");
+      if (!chatWidget.classList.contains("hidden")) {
+        chatInput.focus();
+      }
+    });
+
+    closeChat.addEventListener("click", () => {
+      chatWidget.classList.add("hidden");
+    });
+
+    promptChips.forEach((chip) => {
+      chip.addEventListener("click", () => {
+        chatInput.value = chip.textContent;
+        chatInput.focus();
+      });
+    });
+
+    chatForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const message = chatInput.value.trim();
+      if (!message) return;
+
+      const quickPrompts = document.querySelector(".quick-prompts");
+      if (quickPrompts) quickPrompts.remove();
+
+      addMessage(message, "user");
+      chatInput.value = "";
+      showTypingBubble();
+
+      try {
+        const response = await fetch("/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ message })
+        });
+
+        const data = await response.json();
+
+        const tempMessage = document.querySelector(".message.temp");
+        if (tempMessage) tempMessage.remove();
+
+        addMessage(data.reply || "No response received.", "bot");
+      } catch (error) {
+        const tempMessage = document.querySelector(".message.temp");
+        if (tempMessage) tempMessage.remove();
+
+        addMessage("I’m having trouble reaching the server right now.", "bot");
+        console.error(error);
+      }
+    });
+  </script>
+</body>
+</html>
